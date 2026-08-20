@@ -15,6 +15,7 @@ LOC_FILE_ID = "AgACAgIAAxkBAAIG02qCckSGuZBl6q3eG778d3hmycdNAAIZIGsb5YoQSA72CsJ4p
 MAPS_URL = "https://maps.google.com/?q=40.5243730,70.9442190"
 
 user_states = {}
+user_media = {}  # Foydalanuvchining yig'ilgan xabarlari
 admin_reply_tracker = {}
 all_users = set()
 
@@ -44,7 +45,7 @@ def send_json_api(method, data):
     return {"ok": False}
 
 
-print("Bot ishga tushdi (Media qo'llab-quvvatlash bilan)...")
+print("Bot ishga tushdi...")
 last_update_id = None
 
 while True:
@@ -171,10 +172,11 @@ while True:
               "resize_keyboard": True,
           })
 
-          current_state = user_states.get(chat_id, "")
-
+          # 1. Bekor qilish
           if text == "❌ Bekor qilish":
             user_states[chat_id] = None
+            if chat_id in user_media:
+              user_media[chat_id] = []
             send_api(
                 "sendMessage",
                 {
@@ -185,21 +187,61 @@ while True:
             )
             continue
 
+          # 2. Yuborishni yakunlash (Barchasini bittada adminga jo'natish)
           if text == "✅ Yuborishni yakunlash":
+            current_st = user_states.get(chat_id)
+            items = user_media.get(chat_id, [])
+
+            if items:
+              # Adminga kimdan kelganini yozamiz
+              send_api(
+                  "sendMessage",
+                  {
+                      "chat_id": ADMIN_ID,
+                      "text": (
+                          f"🔔 YANGI MUROJAAT/ZAKAZ!\n👤 Foydalanuvchi:"
+                          f" {user_info}"
+                      ),
+                  },
+              )
+
+              # Barcha to'plangan xabarlarni adminga birma-bir ketma-ket yuborib chiqamiz
+              for m in items:
+                reply_btn = json.dumps({
+                    "inline_keyboard": [[{
+                        "text": "💬 Javob berish",
+                        "callback_data": f"reply_user:{chat_id}",
+                    }]]
+                })
+                send_json_api(
+                    "copyMessage",
+                    {
+                        "chat_id": ADMIN_ID,
+                        "from_chat_id": chat_id,
+                        "message_id": m,
+                        "reply_markup": reply_btn,
+                    },
+                )
+
             user_states[chat_id] = None
+            user_media[chat_id] = []
+
             send_api(
                 "sendMessage",
                 {
                     "chat_id": chat_id,
                     "text": (
-                        "✅ Barcha ma'lumotlaringiz qabul qilindi va adminga"
-                        " yetkazildi!"
+                        "✅ Barcha ma'lumotlaringiz muvaffaqiyatli qabul"
+                        " qilindi va adminga yetkazildi!"
                     ),
                     "reply_markup": keyboard,
                 },
             )
             continue
 
+          current_state = user_states.get(chat_id, "")
+
+          # Admin javob berayotgan bo'lsa
           if current_state and str(current_state).startswith("replying_to_"):
             target_chat_id = int(current_state.split("_")[-1])
             reply_btn = json.dumps({
@@ -224,11 +266,7 @@ while True:
                   "sendMessage",
                   {
                       "chat_id": chat_id,
-                      "text": (
-                          "📥 Xabaringiz yetkazildi. Yana yuborishingiz yoki"
-                          " '✅ Yuborishni yakunlash' tugmasini bosishingiz"
-                          " mumkin."
-                      ),
+                      "text": "📥 Xabaringiz yetkazildi.",
                   },
               )
             continue
@@ -244,7 +282,7 @@ while True:
                   }]]
               })
 
-              res = send_json_api(
+              send_json_api(
                   "copyMessage",
                   {
                       "chat_id": target_chat_id,
@@ -253,15 +291,13 @@ while True:
                       "reply_markup": reply_btn,
                   },
               )
-
-              if res.get("ok"):
-                send_api(
-                    "sendMessage",
-                    {
-                        "chat_id": ADMIN_ID,
-                        "text": "✅ Javobingiz foydalanuvchiga yetkazildi!",
-                    },
-                )
+              send_api(
+                  "sendMessage",
+                  {
+                      "chat_id": ADMIN_ID,
+                      "text": "✅ Javobingiz foydalanuvchiga yetkazildi!",
+                  },
+              )
               continue
 
           if current_state == "waiting_for_ad":
@@ -275,44 +311,32 @@ while True:
             )
             continue
 
+          # Zakaz, zapchast yoki shikoyat yuborilayotganda xabarni xotiraga yig'ish
           elif current_state in [
               "waiting_for_part",
               "waiting_for_order",
               "waiting_for_complaint",
           ]:
-            reply_btn = json.dumps({
-                "inline_keyboard": [[{
-                    "text": "💬 Javob berish",
-                    "callback_data": f"reply_user:{chat_id}",
-                }]]
-            })
+            if chat_id not in user_media:
+              user_media[chat_id] = []
 
-            res = send_json_api(
-                "copyMessage",
-                {
-                    "chat_id": ADMIN_ID,
-                    "from_chat_id": chat_id,
-                    "message_id": msg["message_id"],
-                    "reply_markup": reply_btn,
-                },
-            )
-            if res.get("ok"):
-              admin_reply_tracker[res["result"]["message_id"]] = chat_id
+            user_media[chat_id].append(msg["message_id"])
 
             send_api(
                 "sendMessage",
                 {
                     "chat_id": chat_id,
                     "text": (
-                        "📥 Qabul qilindi! Yana rasm/video/matn yuborishingiz"
-                        " yoki tugatgan bo'lsangiz '✅ Yuborishni yakunlash'"
-                        " tugmasini bosishingiz mumkin."
+                        "📥 Qabul qilindi! Yana rasm, video yoki matn"
+                        " yuborishingiz mumkin. Tugatgach, pastdagi '✅"
+                        " Yuborishni yakunlash' tugmasini bosing:"
                     ),
                     "reply_markup": cancel_keyboard,
                 },
             )
             continue
 
+          # Asosiy menyu buyruqlari
           if text == "/start":
             is_new = chat_id not in all_users
             all_users.add(chat_id)
@@ -494,14 +518,15 @@ while True:
 
           elif text == "✍️ Shikoyat qilish":
             user_states[chat_id] = "waiting_for_complaint"
+            user_media[chat_id] = []
             send_api(
                 "sendMessage",
                 {
                     "chat_id": chat_id,
                     "text": (
-                        "✍️ Shikoyat yoki taklifingizni (rasmlar, videolar,"
-                        " matnlarni ketma-ket) yuboring va oxirida '✅ Yuborishni"
-                        " yakunlash' tugmasini bosing:"
+                        "✍️ Shikoyat yoki taklifingizni yuboring. Bir nechta"
+                        " rasm/video/matn yuborishingiz mumkin. Tugatgach '✅"
+                        " Yuborishni yakunlash' tugmasini bosing:"
                     ),
                     "reply_markup": cancel_keyboard,
                 },
@@ -523,14 +548,15 @@ while True:
 
           elif text == "🔍 Zapchast bor/yo'qligini bilish":
             user_states[chat_id] = "waiting_for_part"
+            user_media[chat_id] = []
             send_api(
                 "sendMessage",
                 {
                     "chat_id": chat_id,
                     "text": (
-                        "Kerakli zapchast rasmlari, nomi yoki videolarni"
-                        " ketma-ket yuboring. Tugatgach '✅ Yuborishni yakunlash'"
-                        " tugmasini bosing:"
+                        "🔍 Kerakli zapchast rasmlari, nomi yoki videolarni"
+                        " yuboring. Xohlaganingizcha qo'shib bo'lgach '✅"
+                        " Yuborishni yakunlash' tugmasini bosing:"
                     ),
                     "reply_markup": cancel_keyboard,
                 },
@@ -538,14 +564,15 @@ while True:
 
           elif text == "🛍 Zakaz qilish":
             user_states[chat_id] = "waiting_for_order"
+            user_media[chat_id] = []
             send_api(
                 "sendMessage",
                 {
                     "chat_id": chat_id,
                     "text": (
-                        "Zakaz qilmoqchi bo'lgan buyumlaringiz rasmlari, videosi"
-                        " va matnlarini yuboring. Tugatgach '✅ Yuborishni"
-                        " yakunlash' tugmasini bosing:"
+                        "🛍 Zakaz qilmoqchi bo'lgan buyumlaringiz rasmlari, videosi"
+                        " va matnlarini yuboring. Barchasini yuborib bo'lgach"
+                        " '✅ Yuborishni yakunlash' tugmasini bosing:"
                     ),
                     "reply_markup": cancel_keyboard,
                 },
