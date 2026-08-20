@@ -15,7 +15,7 @@ LOC_FILE_ID = "AgACAgIAAxkBAAIG02qCckSGuZBl6q3eG778d3hmycdNAAIZIGsb5YoQSA72CsJ4p
 MAPS_URL = "https://maps.google.com/?q=40.5243730,70.9442190"
 
 user_states = {}
-user_media = {}  # Foydalanuvchining yig'ilgan xabarlari
+user_media = {}
 admin_reply_tracker = {}
 all_users = set()
 
@@ -172,7 +172,7 @@ while True:
               "resize_keyboard": True,
           })
 
-          # 1. Bekor qilish
+          # --- 1. ENG BIRINCHI NAVBATDA TUGMALARNI TEKSHIRAMIZ ---
           if text == "❌ Bekor qilish":
             user_states[chat_id] = None
             if chat_id in user_media:
@@ -187,13 +187,10 @@ while True:
             )
             continue
 
-          # 2. Yuborishni yakunlash (Barchasini bittada adminga jo'natish)
           if text == "✅ Yuborishni yakunlash":
-            current_st = user_states.get(chat_id)
             items = user_media.get(chat_id, [])
 
             if items:
-              # Adminga kimdan kelganini yozamiz
               send_api(
                   "sendMessage",
                   {
@@ -205,7 +202,6 @@ while True:
                   },
               )
 
-              # Barcha to'plangan xabarlarni adminga birma-bir ketma-ket yuborib chiqamiz
               for m in items:
                 reply_btn = json.dumps({
                     "inline_keyboard": [[{
@@ -232,12 +228,13 @@ while True:
                     "chat_id": chat_id,
                     "text": (
                         "✅ Barcha ma'lumotlaringiz muvaffaqiyatli qabul"
-                        " qilindi va adminga yetkazildi!"
+                        " qilindi va adminga bittada yetkazildi!"
                     ),
                     "reply_markup": keyboard,
                 },
             )
             continue
+          # --------------------------------------------------------
 
           current_state = user_states.get(chat_id, "")
 
@@ -311,7 +308,7 @@ while True:
             )
             continue
 
-          # Zakaz, zapchast yoki shikoyat yuborilayotganda xabarni xotiraga yig'ish
+          # Zakaz, zapchast yoki shikoyat uchun xabarlarni xotiraga yig'ish
           elif current_state in [
               "waiting_for_part",
               "waiting_for_order",
