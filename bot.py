@@ -60,7 +60,6 @@ while True:
       for update in updates["result"]:
         last_update_id = update["update_id"] + 1
 
-        # --- INLINE TUGMALAR ---
         if "callback_query" in update:
           cb = update["callback_query"]
           cb_id = cb["id"]
@@ -90,7 +89,6 @@ while True:
 
           elif cb_data.startswith("rate_"):
             stars_count = cb_data.split("_")[1]
-
             send_json_api(
                 "answerCallbackQuery",
                 {
@@ -99,7 +97,6 @@ while True:
                     "show_alert": True,
                 },
             )
-
             send_api(
                 "sendMessage",
                 {
@@ -110,7 +107,6 @@ while True:
                     ),
                 },
             )
-
             send_json_api(
                 "editMessageText",
                 {
@@ -122,10 +118,8 @@ while True:
                     ),
                 },
             )
-
           continue
 
-        # --- XABARLAR ---
         if "message" in update:
           msg = update["message"]
           chat_id = msg["chat"]["id"]
