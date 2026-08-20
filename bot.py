@@ -93,7 +93,8 @@ while True:
                         })
 
                     continue
-# --- XABARLAR (MATN, RASM, VIDEO, VA H.K.) ---
+
+                # --- XABARLAR (MATN, RASM, VIDEO, VA H.K.) ---
                 if "message" in update:
                     msg = update["message"]
                     chat_id = msg["chat"]["id"]
@@ -165,7 +166,8 @@ while True:
                                 'message_id': msg['message_id'],
                                 'reply_markup': reply_btn
                             })
-if res.get("ok"):
+
+                            if res.get("ok"):
                                 send_api('sendMessage', {'chat_id': ADMIN_ID, 'text': "✅ Javobingiz foydalanuvchiga yetkazildi!"})
                             else:
                                 send_api('sendMessage', {'chat_id': ADMIN_ID, 'text': "❌ Javob yetkazilmadi."})
@@ -220,7 +222,8 @@ if res.get("ok"):
                         send_api('sendMessage', {'chat_id': chat_id, 'text': "✅ Zakazingiz qabul qilindi!", 'reply_markup': keyboard})
                         user_states[chat_id] = None
                         continue
-# 6. SHIKOYAT YUBORISH (HAR QANDAY MEDIA)
+
+                    # 6. SHIKOYAT YUBORISH (HAR QANDAY MEDIA)
                     elif current_state == "waiting_for_complaint":
                         reply_btn = json.dumps({'inline_keyboard': [[{'text': '💬 Javob berish', 'callback_data': f'reply_user:{chat_id}'}]]})
                         send_api('sendMessage', {'chat_id': ADMIN_ID, 'text': f"⚠️ YANGI SHIKOYAT / TAKLIF!\n👤 Kimdan: {user_info}"})
@@ -277,7 +280,8 @@ if res.get("ok"):
 
                     elif text == "🔥 Chegirmalar":
                         send_api('sendMessage', {'chat_id': chat_id, 'text': "🔥 Hozirgi kunda mavjud bo'lgan chegirmalar va aksiyalar haqida ma'lumot olish uchun rasmiy kanalimizni kuzatib boring:\nhttps://t.me/Lada_cross7", 'reply_markup': keyboard})
- elif text == "🚚 Yetkazib berish":
+
+                    elif text == "🚚 Yetkazib berish":
                         send_api('sendMessage', {'chat_id': chat_id, 'text': "🚚 Dastavka / Yetkazib berish xizmati bor!\nO'zbekiston bo'ylab pochta yoki taksi orqali tezkor yetkazib beramiz. Batafsil ma'lumot uchun menejer bilan bog'laning.", 'reply_markup': keyboard})
 
                     elif text == "💳 To‘lov usullari":
